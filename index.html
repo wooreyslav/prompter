@@ -3,44 +3,82 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>суфлер</title>
+<title>Суфлёр</title>
 <style>
-    html, body {
-        margin: 0;
-        padding: 0;
-        height: 100%;
-        background: #000;
-        color: #fff;
-        font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-        display: flex;
-        justify-content: flex-start; /* ← теперь блок прижат к левому краю */
-        align-items: flex-start;     /* ← блок прижат к верхнему краю */
-        overflow: hidden;
+html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #000;
+      color: #fff;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
 
-    #progress {
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 6px;
-        width: 0%;
-        background: #ff00bf;
-        transition: width 0.4s ease;
-        z-index: 1000;
+#progress {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 6px;
+      width: 0%;
+      background: #ff00bf;
+      transition: width 0.4s ease;
+      z-index: 1000;
     }
 
-    #text {
-        font-size: 40px; /* под iPad Pro — около 10 строк по 55 символов */
-        line-height: 1.4;
-        padding: 40px;
-        white-space: pre; /* ← сохраняет твои оригинальные переносы строк */
-        text-align: left; /* ← выравнивание по левому краю */
-        max-width: 90%;
-        max-height: 90%;
-        overflow-wrap: normal;
-        padding-left: 20px;  /* отступ слева */
-        padding-top: 10px;   /* отступ сверху */
+#text {
+      flex: 1;
+      font-size: 40px;
+      line-height: 1.4;
+      padding: 40px 20px;
+      white-space: pre;
+      text-align: left;
+      overflow: hidden;
     }
+
+#controls {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 12px 0;
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+button {
+      background: #111;
+      color: #fff;
+      border: 1px solid #ff00bf;
+      border-radius: 8px;
+      font-size: 22px;
+      padding: 10px 18px;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+
+button:hover {
+      background: #ff00bf;
+      color: #000;
+    }
+
+i {
+    font-size: 0.8em;
+    opacity: 0.5;
+    }
+
+.song-title {
+    position: fixed;
+    top: 15px;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    font-size: 1em;
+    font-weight: bold;
+    opacity: 0.8;
+}
+
 
 </style>
 </head>
@@ -49,10 +87,16 @@
 <div id="progress"></div>
 <div id="text"></div>
 
+<div id="controls">
+  <button id="prevSection">⬅️ Секция</button>
+  <button id="nextSection">➡️ Секция</button>
+  <button id="prevSong">⏪ Песня</button>
+  <button id="nextSong">⏩ Песня</button>
+</div>
+
 <script>
-  // ====== ТЕКСТ ПЕСЕН (--- это разделитель между секциями для перелистывания) ======
-  const songText = `
-<b>ОСТАНОВКА (BPM 112)</b>
+const songText = `
+<div class="song-title">ОСТАНОВКА (BPM 112)</div>
 <i>[куплет 1]</i>
 Последний трамвай идет до депо
 Я звезды черчу в запотевшем окне
@@ -64,6 +108,7 @@
 Твой след - мой навигатор, покинутый трамвай
 Откуда тебе знать, что я за твоей спиной
 ---
+<div class="song-title">ОСТАНОВКА (BPM 112)</div>
 <i>[припев 1]</i>
 Мне нужен только повод
 Сделать первый шаг
@@ -75,6 +120,7 @@
 Случайно выйдя с тобой
 Не на своей остановке
 ---
+<div class="song-title">ОСТАНОВКА (BPM 112)</div>
 <i>[куплет 2]</i>
 Квартал за кварталом, закрытый «КБ»
 Тропинка до дома дождливым сентябрём
@@ -86,6 +132,7 @@
 Но ты ускоришь шаг, подумав я маньяк
 Торопливо ища ключи в своем пальто
 ---
+<div class="song-title">ОСТАНОВКА (BPM 112)</div>
 <i>[припев 2]</i>
 Мне нужен только повод
 Сделать первый шаг
@@ -96,8 +143,8 @@
 Подумал я дурак
 Случайно выйдя с тобой
 Не на своей остановке
----
-<b>ПАРЕНЬ НА ФОТО (BPM 104)</b>
+----
+<div class="song-title">ПАРЕНЬ НА ФОТО (BPM 104)</div>
 <i>[куплет 1]</i>
 Я давно не у дел, забил болт на работу
 Я один, но в порядке, поверь все нормально
@@ -109,72 +156,54 @@
 Под слоями вещей, в глубинах комода
 Улыбается твой бывший парень на фото
 ---
+<div class="song-title">ПАРЕНЬ НА ФОТО (BPM 104)</div>
 <i>[куплет 2]</i>
-Этот мир уже давно перестал крутиться
+Этот мир уже давно перестал крутиться, 
 Запахи цветов обернулись пылью
 Образы в голове затянула тоска
 Прокрутил много раз то, что должен сказать:
 
-Все эти моменты, на которых мы выросли
-Все эти порезы на наших руках
-Синдром отложенной жизни? Да к черту
-Я растворяю себя в пустяках
-Я просто хотел стать важной частичкой
-Жизни твоей, но что-то не вышло
-Остаться забытой памятью лета
-Тоже неплохо наверно
+Все эти моменты, на которых мы выросли, все эти порезы на наших руках
+Синдром отложенной жизни? Да к черту, Я растворяю себя в пустяках
+Я просто хотел стать важной частичкой жизни твоей, но что-то не вышло
+Остаться забытой памятью лета тоже неплохо наверно!
 ---
+<div class="song-title">ПАРЕНЬ НА ФОТО (BPM 104)</div>
 <i>[припев 2]</i>
 Мое старое худи пропахло тобой
 На балконе окурки и шумы объездной
 Под слоями вещей, в глубинах комода
 Улыбается твой бывший парень на фото
----
-<b>2000 КМ (BPM 98)</b>
+----
+<div class="song-title">2000 КМ (BPM 98)</div>
 <i>[куплет 1]</i>
-Миллионы сообщений
-И пара дней с тобой в Москве 
-Я, кажется, влюбился 
-Додумав все в голове
-
-А может ты захочешь
-Купить билет в Кольцово
-Было бы мило
-Нам увидеться снова
+Миллионы сообщений и пара дней с тобой в Москве 
+Я, кажется, влюбился, додумав все в голове
+А может ты захочешь купить билет в Кольцово
+Было бы мило нам увидеться снова
 ---
+<div class="song-title">2000 КМ (BPM 98)</div>
 <i>[припев 1]</i>
-Я буду тебя ждать здесь
-На Вознесенской горке
-И солнце на закате
-Робко улыбнется
-
-Она не приедет
-Я встречу рассвет один
-2000 километров
-Растворили эндорфин
+Я буду тебя ждать здесь на Вознесенской горке
+И солнце на закате робко улыбнется
+Она не приедет, я встречу рассвет один
+2000 километров растворили эндорфин
 ---
+<div class="song-title">2000 КМ (BPM 98)</div>
 <i>[куплет 2]</i>
-Ну как ты там в своей Москве
-Восьмиполосные шоссе
-Они обвили все вокруг
-И заглушили сердца стук
-И я, наверное, скучаю
-Внутри ненависть копя
-Я ненавижу город твой
-Чуть больше, чем люблю тебя
+Ну как ты там в своей Москве, восьмиполосные шоссе
+Они обвили все вокруг и заглушили сердца стук
+И я, наверное, скучаю внутри ненависть копя
+Я ненавижу город твой чуть больше, чем люблю тебя
 ---
+<div class="song-title">2000 КМ (BPM 98)</div>
 <i>[припев 2]</i>
-Я буду тебя ждать здесь
-На Вознесенской горке
-И солнце на закате
-Робко улыбнется
-
-Она не приедет
-Я встречу рассвет один
-2000 километров
-Растворили эндорфин
----
-<b>Снова не здесь (BPM 118)</b>
+Я буду тебя ждать здесь на Вознесенской горке
+И солнце на закате робко улыбнется
+Она не приедет, я встречу рассвет один
+2000 километров растворили эндорфин
+----
+<div class="song-title">Снова не здесь (BPM 118)</div>
 <i>[куплет 1]</i>
 Ночь. Свет фонаря и безумных идей
 Освещая шаги под окном
@@ -186,11 +215,13 @@
 Я хотел бы вернуть то время назад
 Господи, сохрани и спаси
 ---
+<div class="song-title">Снова не здесь (BPM 118)</div>
 <i>[припев 1]</i>
 Но ты снова не здесь,
 ты снова не здесь
 Ты снова сегодня не дома
 ---
+<div class="song-title">Снова не здесь (BPM 118)</div>
 <i>[куплет 2]</i>
 Электрических скрежет когтей
 И десятки ночных поездов
@@ -202,12 +233,69 @@
 Голос нашедший ответ в тишине
 И кто-то по-прежнему нужен
 ---
+<div class="song-title">Снова не здесь (BPM 118)</div>
 <i>[припев 2]</i>
 Но ты снова не здесь,
 ты снова не здесь
 Ты снова сегодня не дома
+----
+<div class="song-title">Нету нас (BPM 99)</div>
+<i>[куплет 1]</i>
+О боже сколько раз 
+Перебирать что со мной было
+Забыть все то о нас 
+Что голову забило
+
+Стереть всю память лет 
+Выбросить все твои вещи 
+Остаться в прошлом легче чем 
+Сказать "прощай, до встречи" 
 ---
-<b>Теплица (BPM 110)</b>
+<div class="song-title">Нету нас (BPM 99)</div>
+<i>[припев 1]</i>
+Но нету, нету нас 
+Я забываю твое имя 
+И после сотни избытых фраз 
+Меня в итоге отпустило 
+---
+<div class="song-title">Нету нас (BPM 99)</div>
+<i>[куплет 2]</i>
+Забудь про искры тёмных глаз — 
+В них больше нет былой надежды 
+Они сгорели, как грехи, 
+На вечеринке без одежды. 
+
+Смех до утра, фотки в альбоме 
+Теперь мы просто "ну, знакомы" 
+---
+<div class="song-title">Нету нас (BPM 99)</div>
+<i>[припев 2]</i>
+Но нету, нету нас 
+Я забываю твое имя 
+И после сотни избытых фраз 
+Меня в итоге отпустило
+----
+<div class="song-title">Супермаркет (BPM 144)</div>
+<i>[куплет 1]</i>
+Мигают товары, зовут за собой 
+Карусель скидок крутит толпой 
+Катишься дальше по этим путям 
+Ты купишь покой, но не нужен он сам 
+
+Обыденно и просто, никакой спешки 
+Двери открыты, полезай в тележку 
+---
+<div class="song-title">Супермаркет (BPM 144)</div>
+<i>[куплет 2]</i>
+А ты всю ночь и до рассветных огней 
+Рыщишь по улицам в свете фонарей 
+А ты всю ночь и до рассветных огней 
+Погряз навеки в супермаркете идей 
+
+Вдоль бакалеи по третьему кругу 
+На третьей кассе увидим друг друга 
+----
+<div class="song-title">Теплица (BPM 110)</div>
 <i>[куплет 1]</i>
 Теплица мой дом, в теплице спокойно
 Ноги мои прочно вросли
@@ -219,6 +307,7 @@
 Это не беда - слетел с катушек
 Зажигалки свет путь освещает
 ---
+<div class="song-title">Теплица (BPM 110)</div>
 <i>[куплет 2]</i>
 В зеркале разбитый
 Памяти нет совсем
@@ -229,8 +318,8 @@
 Запах табака и самокруток
 Это не беда - слетел с катушек
 Зажигалки свет путь освещает
----
-<b>Белый шум (BPM 104)</b>
+----
+<div class="song-title">Белый шум (BPM 104)</div>
 <i>[куплет 1]</i>
 Белый шум телевизора в углу
 Не спешу писать тебе, я опять один лежу
@@ -243,72 +332,108 @@
 Я просто держусь за остатки сознания
 Мое одиночество на все оправдание
 ---
+<div class="song-title">Белый шум (BPM 104)</div>
 <i>[пре-припев]</i>
 Я день и ночь поменял местами
 Растворенный синего света тонами
-
 <i>[припев]</i>
 Прости меня, я не в состоянии
 Поднять себя и из дома выйти
 Мой сон ушел с последней банкой кофе
 На улицы, где никто не ждет меня
 Не ждет меня
-
 <i>[аутро]</i>
 Я день и ночь поменял местами
 Растворенный синего света тонами
----
 `;
 
-    // ====== ЛОГИКА ПЕРЕКЛЮЧЕНИЯ ======
-    const sections = songText.trim().split(/\r?\n-{3,}\r?\n/).map(s => s.trim());
-    let current = 0;
-    const textEl = document.getElementById('text');
-    const progressEl = document.getElementById('progress');
+// ====== РАЗБИЕНИЕ ======
+const rawSongs = songText.trim().split(/\r?\n-{4,}\r?\n/).map(s => s.trim());
+const songs = rawSongs.map(song => song.split(/\r?\n-{3,}\r?\n/).map(s => s.trim()));
 
-    // ====== Функция авто-подгонки шрифта ======
-    function adjustFontSize() {
-        let fontSize = 42; // начальный размер
-            textEl.style.fontSize = fontSize + 'px';
-        while (textEl.scrollHeight > textEl.clientHeight && fontSize > 10) {
-            fontSize -= 1;
-            textEl.style.fontSize = fontSize + 'px';
-        }
-    }
+// плоский массив всех секций (для сквозного перелистывания)
+const allSections = [];
+const sectionMap = []; // соответствие "глобальная секция → песня"
 
-    function updateProgress() {
-        const percent = ((current + 1) / sections.length) * 100;
-        progressEl.style.width = percent + '%';
-    }
+songs.forEach((song, songIndex) => {
+  song.forEach(section => {
+    allSections.push(section);
+    sectionMap.push(songIndex);
+  });
+});
 
-    function showSection(i) {
-        if (i < 0) i = 0;
-        if (i >= sections.length) i = sections.length - 1;
-        current = i;
-        textEl.innerHTML = sections[i]; // innerHTML для поддержки <b>, <i>
-        adjustFontSize();               // подгонка размера под экран
-        updateProgress();
-    }
+let currentSectionGlobal = 0;
 
-    function next() { showSection(current + 1); }
-    function prev() { showSection(current - 1); }
+const textEl = document.getElementById('text');
+const progressEl = document.getElementById('progress');
 
-    // Управление стрелками / педалью
-    window.addEventListener('keydown', e => {
-        if (["ArrowRight", "PageDown"].includes(e.key)) {
-        next(); e.preventDefault();
-        } else if (["ArrowLeft", "PageUp"].includes(e.key)) {
-        prev(); e.preventDefault();
-        }
-    });
+function adjustFontSize() {
+  let fontSize = 42;
+  textEl.style.fontSize = fontSize + 'px';
+  while (textEl.scrollHeight > textEl.clientHeight && fontSize > 10) {
+    fontSize -= 1;
+    textEl.style.fontSize = fontSize + 'px';
+  }
+}
 
-    // Показываем первую секцию сразу
-    showSection(0);
+function updateProgress() {
+  const percent = ((currentSectionGlobal + 1) / allSections.length) * 100;
+  progressEl.style.width = percent + '%';
+}
 
-    // Подстраиваем размер при изменении размера окна (например, ориентация iPad)
-    window.addEventListener('resize', () => showSection(current));
+function showSection(globalIndex) {
+  if (globalIndex < 0) globalIndex = 0;
+  if (globalIndex >= allSections.length) globalIndex = allSections.length - 1;
+  currentSectionGlobal = globalIndex;
+  textEl.innerHTML = allSections[globalIndex];
+  adjustFontSize();
+  updateProgress();
+}
+
+function nextSection() { showSection(currentSectionGlobal + 1); }
+function prevSection() { showSection(currentSectionGlobal - 1); }
+
+function nextSong() {
+  const currentSong = sectionMap[currentSectionGlobal];
+  if (currentSong < songs.length - 1) {
+    // перейти к первой секции следующей песни
+    const nextIndex = sectionMap.indexOf(currentSong + 1);
+    showSection(nextIndex);
+  }
+}
+
+function prevSong() {
+  const currentSong = sectionMap[currentSectionGlobal];
+  if (currentSong > 0) {
+    // перейти к первой секции предыдущей песни
+    const prevIndex = sectionMap.indexOf(currentSong - 1);
+    showSection(prevIndex);
+  }
+}
+
+// ====== КНОПКИ ======
+document.getElementById('prevSection').addEventListener('click', prevSection);
+document.getElementById('nextSection').addEventListener('click', nextSection);
+document.getElementById('prevSong').addEventListener('click', prevSong);
+document.getElementById('nextSong').addEventListener('click', nextSong);
+
+// ====== КЛАВИАТУРА ======
+window.addEventListener('keydown', e => {
+  if (["ArrowRight", "PageDown"].includes(e.key)) {
+    nextSection(); e.preventDefault();
+  } else if (["ArrowLeft", "PageUp"].includes(e.key)) {
+    prevSection(); e.preventDefault();
+  } else if (["ArrowUp"].includes(e.key)) {
+    prevSong(); e.preventDefault();
+  } else if (["ArrowDown"].includes(e.key)) {
+    nextSong(); e.preventDefault();
+  }
+});
+
+// ====== ЗАПУСК ======
+showSection(0);
+window.addEventListener('resize', () => showSection(currentSectionGlobal));
 </script>
 
 </body>
 </html>
-
