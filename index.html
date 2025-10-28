@@ -410,6 +410,36 @@ window.addEventListener('keydown', e => {
 // ====== ЗАПУСК ======
 showSection(0);
 window.addEventListener('resize', () => showSection(currentSectionGlobal));
+
+// ====== ПОДДЕРЖКА IPAD + ПУЛЬТ ======
+const hiddenInput = document.createElement('input');
+hiddenInput.style.opacity = '0';
+hiddenInput.style.position = 'fixed';
+hiddenInput.style.top = '-100px';
+document.body.appendChild(hiddenInput);
+
+// Фокус при загрузке
+hiddenInput.focus();
+
+// Возвращаем фокус при любом касании или клике
+['touchend', 'click'].forEach(ev =>
+  window.addEventListener(ev, () => hiddenInput.focus())
+);
+
+// Привязка клавиш пульта к экранным кнопкам
+window.addEventListener('keydown', e => {
+  const nextBtn = document.getElementById('nextSection');
+  const prevBtn = document.getElementById('prevSection');
+
+  if (e.key === 'ArrowRight' || e.key === 'PageDown') {
+    nextBtn.click(); // листаем вперёд
+    e.preventDefault();
+  } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+    prevBtn.click(); // листаем назад
+    e.preventDefault();
+  }
+});
+
 </script>
 
 </body>
