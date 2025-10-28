@@ -452,23 +452,23 @@ showSection(0);
 window.addEventListener('resize', () => showSection(currentSectionGlobal));
 
 // ====== ПОДДЕРЖКА IPAD + ПУЛЬТ ======
-const hiddenInput = document.createElement('input');
-hiddenInput.setAttribute('type', 'text');
-hiddenInput.setAttribute('readonly', true);
-hiddenInput.style.position = 'fixed';
-hiddenInput.style.opacity = '0';
-hiddenInput.style.height = '0';
-hiddenInput.style.width = '0';
-hiddenInput.style.top = '-100px';
-hiddenInput.style.zIndex = '-1';
-document.body.appendChild(hiddenInput);
+const hiddenButton = document.createElement('input');
+hiddenButton.type = 'button';
+hiddenButton.style.position = 'fixed';
+hiddenButton.style.opacity = '0';
+hiddenButton.style.height = '0';
+hiddenButton.style.width = '0';
+hiddenButton.style.top = '-100px';
+hiddenButton.style.left = '-100px';
+hiddenButton.tabIndex = -1; // чтобы не мешал Tab
+document.body.appendChild(hiddenButton);
 
-// Фокус при загрузке
-hiddenInput.focus({ preventScroll: true });
+// Ставим фокус на кнопку при старте
+hiddenButton.focus({ preventScroll: true });
 
-// Возвращаем фокус при любом касании или клике
+// Возвращаем фокус при касании или клике
 ['touchend', 'click'].forEach(ev =>
-  window.addEventListener(ev, () => hiddenInput.focus({ preventScroll: true }))
+  window.addEventListener(ev, () => hiddenButton.focus({ preventScroll: true }))
 );
 
 // Привязка клавиш пульта к экранным кнопкам
@@ -485,8 +485,10 @@ window.addEventListener('keydown', e => {
   }
 });
 
+
 </script>
 
 </body>
 </html>
+
 
