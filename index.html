@@ -304,6 +304,46 @@ const songText = `<div class="song-title">ОСТАНОВКА (BPM 112)</div>
 Не ждет меня
 <div class="label">[аутро]</div>Я день и ночь поменял местами
 Растворенный синего света тонами
+----
+<div class="song-title">POST BLUE (BPM 125)</div>
+<div class="label">[куплет 1]</div>It's in the water, baby
+It's in the pills that bring you down
+It's in the water, baby
+It's in your bag of golden brown
+It's in the water, baby
+It's in your frequency
+It's in the water, baby
+It's between you and me
+---
+<div class="song-title">POST BLUE (BPM 125)</div>
+<div class="label">[куплет 2]</div>It's in the water, baby
+It's in the pills that pick you up
+It's in the water, baby
+It's in the special way we fuck
+It's in the water, baby
+It's in your family tree
+It's in the water, baby
+It's between you and me
+
+Bite the hand that feeds
+Tap the vein that bleeds
+Down on my bended knees
+I'd break the back of love for you
+---
+<div class="song-title">POST BLUE (BPM 125)</div>
+It's in the water, baby
+It's in the pills that bring you down
+It's in the water, baby
+It's in your bag of golden brown
+It's in the water, baby
+It's in your frequency
+It's in the water, baby
+It's between you and me
+
+Bite the hand that feeds
+Tap the vein that bleeds
+Down on my bended knees
+I'd break the back of love for you
 `;
 
 // ====== РАЗБИЕНИЕ ======
@@ -413,17 +453,22 @@ window.addEventListener('resize', () => showSection(currentSectionGlobal));
 
 // ====== ПОДДЕРЖКА IPAD + ПУЛЬТ ======
 const hiddenInput = document.createElement('input');
-hiddenInput.style.opacity = '0';
+hiddenInput.setAttribute('type', 'text');
+hiddenInput.setAttribute('readonly', true);
 hiddenInput.style.position = 'fixed';
+hiddenInput.style.opacity = '0';
+hiddenInput.style.height = '0';
+hiddenInput.style.width = '0';
 hiddenInput.style.top = '-100px';
+hiddenInput.style.zIndex = '-1';
 document.body.appendChild(hiddenInput);
 
 // Фокус при загрузке
-hiddenInput.focus();
+hiddenInput.focus({ preventScroll: true });
 
 // Возвращаем фокус при любом касании или клике
 ['touchend', 'click'].forEach(ev =>
-  window.addEventListener(ev, () => hiddenInput.focus())
+  window.addEventListener(ev, () => hiddenInput.focus({ preventScroll: true }))
 );
 
 // Привязка клавиш пульта к экранным кнопкам
@@ -432,10 +477,10 @@ window.addEventListener('keydown', e => {
   const prevBtn = document.getElementById('prevSection');
 
   if (e.key === 'ArrowRight' || e.key === 'PageDown') {
-    nextBtn.click(); // листаем вперёд
+    nextBtn.click();
     e.preventDefault();
   } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
-    prevBtn.click(); // листаем назад
+    prevBtn.click();
     e.preventDefault();
   }
 });
@@ -444,3 +489,4 @@ window.addEventListener('keydown', e => {
 
 </body>
 </html>
+
