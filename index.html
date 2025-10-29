@@ -67,8 +67,8 @@ button:hover {
     }
 
 .label {
-    font-size: 0.7em;
-    opacity: 0.5;
+    font-size: 0.6em;
+    opacity: 0.6;
     font-style: italic;
 }
 
@@ -163,10 +163,14 @@ const songText = `<div class="song-title">ОСТАНОВКА (BPM 112)</div>
 Образы в голове затянула тоска
 Прокрутил много раз то, что должен сказать:
 
-Все эти моменты, на которых мы выросли, все эти порезы на наших руках
-Синдром отложенной жизни? Да к черту, Я растворяю себя в пустяках
-Я просто хотел стать важной частичкой жизни твоей, но что-то не вышло
-Остаться забытой памятью лета тоже неплохо наверно!
+Все эти моменты, на которых мы выросли,
+Все эти порезы на наших руках
+Синдром отложенной жизни? Да к черту,
+Я растворяю себя в пустяках
+Я просто хотел стать важной частичкой
+Жизни твоей, но что-то не вышло
+Остаться забытой памятью лета
+Тоже неплохо наверно!
 ---
 <div class="song-title">ПАРЕНЬ НА ФОТО (BPM 104)</div>
 <div class="label">[припев 2]</div>Мое старое худи пропахло тобой
@@ -327,21 +331,37 @@ const textEl = document.getElementById('text');
 const progressEl = document.getElementById('progress');
 
 function adjustFontSize() {
-  textEl.style.fontSize = '42px';
-  textEl.style.transform = 'none';
-  textEl.style.width = '100%'; // сброс предыдущего
+  const container = textEl;
+  const baseSize = 42;
+  let fontSize = baseSize;
 
-  const containerWidth = textEl.clientWidth;
-  const contentWidth = textEl.scrollWidth;
+  container.style.fontSize = fontSize + 'px';
+  container.style.transform = 'none';
+  container.style.width = '100%';
+  container.style.height = 'auto';
 
-  if (contentWidth > containerWidth) {
-    const scale = containerWidth / contentWidth;
+  const maxWidth = container.clientWidth;
+  const maxHeight = container.clientHeight;
 
-    textEl.style.transformOrigin = 'left top';
-    textEl.style.transform = `scaleX(${scale})`;
+  // 🔁 уменьшаем шрифт до тех пор, пока текст не влезет
+  let tries = 0;
+  while ((container.scrollWidth > maxWidth || container.scrollHeight > maxHeight) && tries < 20) {
+    fontSize *= 0.9; // уменьшаем на 10%
+    container.style.fontSize = fontSize + 'px';
+    tries++;
+  }
 
-    // 🟢 ВАЖНО: гарантируем, что контейнер реально заужен
-    textEl.style.width = (contentWidth * scale) + 'px';
+  // 🔁 если текст слишком маленький, попробуем чуть увеличить (чтобы занять максимум пространства)
+  while ((container.scrollWidth < maxWidth * 0.95 && container.scrollHeight < maxHeight * 0.95) && tries < 40) {
+    fontSize *= 1.05;
+    container.style.fontSize = fontSize + 'px';
+    tries++;
+    if (container.scrollWidth > maxWidth || container.scrollHeight > maxHeight) {
+      // если чуть-чуть вылез — вернись на шаг назад
+      fontSize /= 1.05;
+      container.style.fontSize = fontSize + 'px';
+      break;
+    }
   }
 }
 
