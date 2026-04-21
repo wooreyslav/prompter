@@ -1,0 +1,1149 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Редактор сетлиста</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: #0d0d0d;
+  color: #eee;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ===== САЙДБАР ===== */
+#sidebar {
+  width: 260px;
+  min-width: 200px;
+  background: #111;
+  border-right: 1px solid #2a2a2a;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+/* ===== ЛОГОТИП ===== */
+#sidebar-logo {
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid #1e1e1e;
+  user-select: none;
+}
+#sidebar-logo .logo-main {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #fff;
+  line-height: 1;
+}
+#sidebar-logo .logo-main span {
+  color: #ff00bf;
+}
+#sidebar-logo .logo-sub {
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #444;
+  margin-top: 3px;
+}
+
+/* ===== КНОПКА ДОБАВИТЬ В СЕТЛИСТ ===== */
+#btn-add-song-inline {
+  margin: 8px 10px 4px;
+  width: calc(100% - 20px);
+  font-size: 12px;
+  padding: 6px 10px;
+  border-style: dashed;
+  color: #555;
+  border-color: #2e2e2e;
+}
+#btn-add-song-inline:hover { color: #aaa; border-color: #555; background: #1a1a1a; }
+
+#sidebar-tabs {
+  display: flex;
+  border-bottom: 1px solid #2a2a2a;
+}
+.sidebar-tab {
+  flex: 1;
+  padding: 11px 0;
+  text-align: center;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  color: #555;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+  user-select: none;
+}
+.sidebar-tab.active { color: #ff00bf; border-bottom-color: #ff00bf; }
+.sidebar-tab:hover:not(.active) { color: #888; }
+
+#song-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+#settings-panel {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  display: none;
+}
+#settings-panel.visible { display: block; }
+
+.song-item {
+  padding: 9px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  border-left: 3px solid transparent;
+  transition: 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.song-item:hover { background: #1a1a1a; }
+.song-item.active { background: #1e1e1e; border-left-color: #ff00bf; color: #ff00bf; }
+.song-item.disabled .song-name { opacity: 0.35; text-decoration: line-through; }
+.song-item.disabled .song-num  { opacity: 0.25; }
+.song-num  { color: #555; font-size: 11px; flex-shrink: 0; }
+.song-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.song-cover-badge { font-size: 10px; background: #333; color: #aaa; padding: 1px 5px; border-radius: 3px; flex-shrink: 0; }
+.song-drag-handle { cursor: grab; color: #444; font-size: 14px; flex-shrink: 0; user-select: none; }
+.song-drag-handle:active { cursor: grabbing; }
+.song-item:hover .song-drag-handle { color: #666; }
+.song-item.song-dragging { opacity: 0.4; }
+.song-item.drop-before { box-shadow: inset 0 2px 0 #ff00bf; }
+.song-item.drop-after  { box-shadow: inset 0 -2px 0 #ff00bf; }
+.toggle-active { background: none; border: none; cursor: pointer; font-size: 14px; padding: 0 1px; flex-shrink: 0; opacity: 0.5; transition: opacity 0.15s; line-height: 1; }
+.toggle-active:hover { opacity: 1; }
+
+#sidebar-footer {
+  padding: 10px;
+  border-top: 1px solid #2a2a2a;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ===== ПРАВАЯ ПАНЕЛЬ ===== */
+#editor-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#editor-toolbar {
+  padding: 10px 16px;
+  border-bottom: 1px solid #2a2a2a;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  background: #111;
+}
+#editor-toolbar h3 { margin: 0; flex: 1; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#editor-content { flex: 1; overflow-y: auto; padding: 16px; }
+
+/* ===== ФОРМА ПЕСНИ ===== */
+.field-row  { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+.field-group { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 140px; }
+.field-group label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #888; }
+input[type="text"], input[type="number"], input[type="color"], select {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: #eee;
+  padding: 7px 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s;
+}
+input[type="text"]:focus, input[type="number"]:focus, select:focus { border-color: #ff00bf; }
+input[type="color"] { padding: 3px 6px; height: 36px; cursor: pointer; }
+select option { background: #1a1a1a; }
+
+/* ===== СЕКЦИИ ===== */
+#sections-header { display: flex; justify-content: space-between; align-items: center; margin: 16px 0 8px; }
+#sections-header h4 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #888; }
+
+.section-card { background: #161616; border: 1px solid #252525; border-radius: 8px; margin-bottom: 10px; overflow: hidden; }
+.section-card-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #1c1c1c; border-bottom: 1px solid #252525; cursor: pointer; user-select: none; }
+.section-card-header:hover { background: #202020; }
+.collapse-arrow { font-size: 10px; color: #555; flex-shrink: 0; transition: transform 0.2s; }
+.section-card.collapsed .collapse-arrow { transform: rotate(-90deg); }
+.section-card.collapsed textarea { display: none; }
+.section-card-header input { flex: 1; background: transparent; border: none; border-bottom: 1px solid #333; color: #ff00bf; font-size: 13px; font-style: italic; padding: 2px 4px; outline: none; }
+.section-card-header input:focus { border-bottom-color: #ff00bf; }
+.section-card textarea { width: 100%; background: #111; border: none; color: #eee; font-family: "Courier New", monospace; font-size: 13px; line-height: 1.6; padding: 10px 12px; resize: none; min-height: 52px; outline: none; overflow: hidden; box-sizing: border-box; }
+.section-card textarea:focus { background: #141414; }
+.drag-handle { cursor: grab; color: #444; font-size: 16px; user-select: none; }
+.drag-handle:active { cursor: grabbing; }
+.section-card.dragging { opacity: 0.4; }
+.section-card.drag-over { border-color: #ff00bf; }
+
+/* ===== НАСТРОЙКИ ===== */
+.settings-section { margin-bottom: 20px; }
+.settings-section h4 { margin: 0 0 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #666; border-bottom: 1px solid #222; padding-bottom: 6px; }
+.color-row { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
+.color-row label { font-size: 12px; color: #aaa; flex: 1; }
+
+/* кастомный hue-пикер */
+#hue-picker-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 2px;
+}
+#hue-swatch {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 2px solid rgba(255,255,255,0.15);
+}
+#hue-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(to right,
+    hsl(0,100%,50%), hsl(30,100%,50%), hsl(60,100%,50%),
+    hsl(90,100%,50%), hsl(120,100%,50%), hsl(150,100%,50%),
+    hsl(180,100%,50%), hsl(210,100%,50%), hsl(240,100%,50%),
+    hsl(270,100%,50%), hsl(300,100%,50%), hsl(330,100%,50%), hsl(360,100%,50%));
+  outline: none;
+  cursor: pointer;
+}
+#hue-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid rgba(0,0,0,0.3);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  cursor: pointer;
+}
+#hue-slider::-moz-range-thumb {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid rgba(0,0,0,0.3);
+  cursor: pointer;
+}
+
+#font-preview {
+  margin-top: 10px;
+  padding: 12px 14px;
+  background: var(--preview-bg, #0a0a0a);
+  border-radius: 6px;
+  border: 1px solid #2a2a2a;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--preview-text, #fff);
+  transition: all 0.3s;
+}
+
+/* ===== TOGGLE SWITCH ===== */
+.toggle-track {
+  width: 36px; height: 20px;
+  background: #333;
+  border-radius: 10px;
+  position: relative;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.toggle-thumb {
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 14px; height: 14px;
+  background: #666;
+  border-radius: 50%;
+  transition: transform 0.2s, background 0.2s;
+}
+#s-contrast:checked + .toggle-track { background: #ff00bf44; border: 1px solid #ff00bf; }
+#s-contrast:checked + .toggle-track .toggle-thumb { transform: translateX(16px); background: #ff00bf; }
+
+/* ===== КНОПКИ ===== */
+.btn { background: #1a1a1a; color: #eee; border: 1px solid #333; border-radius: 6px; font-size: 13px; padding: 7px 14px; cursor: pointer; transition: 0.15s; font-family: inherit; white-space: nowrap; }
+.btn:hover { background: #252525; border-color: #555; }
+.btn.primary { background: #ff00bf22; border-color: #ff00bf; color: #ff00bf; }
+.btn.primary:hover { background: #ff00bf; color: #000; }
+.btn.danger { border-color: #f44; color: #f44; }
+.btn.danger:hover { background: #f44; color: #000; }
+.btn.small { font-size: 11px; padding: 4px 9px; }
+.btn.icon  { padding: 5px 8px; font-size: 15px; }
+
+/* ===== FONT PICKER DROPDOWN ===== */
+#font-picker-wrap { position: relative; }
+.font-picker-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #333;
+  background: #111;
+  color: #eee;
+  cursor: pointer;
+  font-size: 15px;
+  transition: border-color 0.12s;
+  user-select: none;
+}
+.font-picker-btn:hover { border-color: #555; }
+.font-picker-arrow { font-size: 11px; color: #666; margin-left: 8px; transition: transform 0.15s; }
+.font-picker-btn.open .font-picker-arrow { transform: rotate(180deg); }
+.font-picker-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0; right: 0;
+  background: #161616;
+  border: 1px solid #333;
+  border-radius: 6px;
+  overflow: hidden;
+  z-index: 100;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+}
+.font-picker-dropdown.hidden { display: none; }
+.font-option {
+  padding: 9px 12px;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 15px;
+  transition: background 0.1s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.font-option:hover { background: #222; color: #fff; }
+.font-option.selected { color: #ff00bf; background: #1a1a1a; }
+
+/* ===== ПУСТОЕ СОСТОЯНИЕ ===== */
+#empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #444; gap: 12px; }
+#empty-state .big-icon { font-size: 48px; }
+
+/* ===== TOAST ===== */
+#toast { position: fixed; bottom: 24px; right: 24px; background: #1e1e1e; border: 1px solid #333; border-radius: 8px; padding: 10px 18px; font-size: 13px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 9999; }
+#toast.show { opacity: 1; }
+#toast.success { border-color: #4caf50; color: #4caf50; }
+#toast.error   { border-color: #f44; color: #f44; }
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <div id="sidebar-logo">
+    <div class="logo-main">teplitsa<span>Prompter</span></div>
+    <div class="logo-sub">setlist editor</div>
+  </div>
+
+  <div id="sidebar-tabs">
+    <div class="sidebar-tab active" data-tab="songs">🎵 Сетлист</div>
+    <div class="sidebar-tab" data-tab="settings">⚙️ Вид</div>
+  </div>
+
+  <button class="btn" id="btn-add-song" style="display:none"></button><!-- сохраняем id для JS -->
+  <button class="btn" id="btn-add-song-inline">+ Добавить песню</button>
+
+  <div id="song-list"></div>
+
+  <!-- Панель настроек -->
+  <div id="settings-panel">
+    <div class="settings-section">
+      <h4>Шрифт</h4>
+      <div class="field-group">
+        <input type="hidden" id="s-font" value="Barlow Semi Condensed">
+        <div id="font-picker-wrap">
+          <div id="font-picker-selected" class="font-picker-btn">
+            <span id="font-picker-label">Barlow Semi Condensed</span>
+            <span class="font-picker-arrow">▾</span>
+          </div>
+          <div id="font-picker-dropdown" class="font-picker-dropdown hidden"></div>
+        </div>
+      </div>
+      <div class="field-row" style="margin-top:10px">
+        <div class="field-group">
+          <label>Макс. размер (px)</label>
+          <input type="number" id="s-fontsize" min="24" max="96" step="2" value="48">
+        </div>
+        <div class="field-group">
+          <label>Межстрочный</label>
+          <input type="number" id="s-lineheight" min="1.0" max="2.0" step="0.05" value="1.35">
+        </div>
+      </div>
+      <div class="field-group" style="margin-top:10px">
+        <label>Авто-объединение (строк ≤)</label>
+        <input type="number" id="s-autojoin" min="0" max="20" step="1" value="4"
+          title="Секции с таким кол-вом строк или меньше автоматически объединяются со следующей. 0 = выкл">
+        <span style="font-size:11px;color:#555;margin-top:3px">0 = отключить, рекомендуется 4</span>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h4>Цвета</h4>
+      <div class="color-row">
+        <label>Акцентный цвет</label>
+      </div>
+      <div id="hue-picker-wrap">
+        <div id="hue-swatch"></div>
+        <input type="range" id="hue-slider" min="0" max="359" value="300">
+      </div>
+      <label class="toggle-row" style="display:flex;align-items:center;gap:10px;margin-top:12px;cursor:pointer">
+        <div class="toggle-switch" id="s-contrast-wrap">
+          <input type="checkbox" id="s-contrast" style="display:none">
+          <div class="toggle-track"><div class="toggle-thumb"></div></div>
+        </div>
+        <span style="font-size:12px;color:#aaa">Контрастный режим (ч/б)</span>
+      </label>
+      <div id="contrast-hint" style="margin-top:8px;font-size:11px;color:#555;line-height:1.5">
+        Выкл — тёплые тона на основе акцента<br>
+        Вкл — чёрный фон, белый текст
+      </div>
+    </div>
+  </div>
+
+  <div id="sidebar-footer">
+    <button class="btn primary" id="btn-publish">🚀 Опубликовать</button>
+    <button class="btn" id="btn-save">💾 Резервная копия</button>
+    <button class="btn" id="btn-load-file">📂 Импорт JSON</button>
+    <input type="file" id="file-input" accept=".json" style="display:none">
+    <a href="index.html" style="text-align:center;font-size:12px;color:#555;text-decoration:none;padding:4px">▶ Открыть суфлёр</a>
+  </div>
+</div>
+
+<div id="editor-panel">
+  <div id="editor-toolbar">
+    <h3 id="toolbar-title">Выберите песню</h3>
+    <button class="btn small" id="btn-song-up">↑</button>
+    <button class="btn small" id="btn-song-down">↓</button>
+    <button class="btn small danger" id="btn-delete-song">🗑 Удалить</button>
+  </div>
+  <div id="editor-content">
+    <div id="empty-state">
+      <div class="big-icon">🎤</div>
+      <div>Выберите песню из списка или добавьте новую</div>
+    </div>
+    <div id="song-form" style="display:none">
+      <div class="field-row">
+        <div class="field-group" style="flex:2">
+          <label>Название</label>
+          <input type="text" id="f-title" placeholder="НАЗВАНИЕ ПЕСНИ">
+        </div>
+        <div class="field-group">
+          <label>BPM</label>
+          <input type="number" id="f-bpm" placeholder="120" min="1" max="300">
+        </div>
+        <div class="field-group">
+          <label>Кавер (артист)</label>
+          <input type="text" id="f-cover" placeholder="НЕРВЫ">
+        </div>
+      </div>
+      <div id="sections-header">
+        <h4>Секции</h4>
+        <button class="btn small primary" id="btn-add-section">+ Секция</button>
+      </div>
+      <div id="sections-container"></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- МОДАЛЬ: ПАРОЛЬ -->
+<div id="modal-password" style="position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9000;align-items:center;justify-content:center;display:none">
+  <div style="background:#161616;border:1px solid #333;border-radius:12px;padding:32px;width:320px;display:flex;flex-direction:column;gap:16px">
+    <div style="font-size:14px;font-weight:600;letter-spacing:0.05em">🔒 Редактор сетлиста</div>
+    <div style="font-size:12px;color:#666">Введите пароль для доступа</div>
+    <input type="password" id="input-password" placeholder="пароль"
+      style="background:#1a1a1a;border:1px solid #333;color:#eee;padding:10px 14px;border-radius:8px;font-size:15px;font-family:inherit;outline:none">
+    <div id="password-error" style="font-size:11px;color:#f44;display:none">Неверный пароль</div>
+    <button class="btn primary" id="btn-password-ok" style="width:100%">Войти</button>
+  </div>
+</div>
+
+
+
+<script>
+// ===== КОНФИГ =====
+// Пароль для входа в редактор. Текущий пароль: "prompter"
+// Чтобы сменить: зайди на https://emn178.github.io/online-tools/sha256.html
+// введи новый пароль → скопируй хеш → замени строку ниже
+const PASSWORD_HASH = 'cf23dc33d6aba13592a72190564ed18b2c0dae295f681ee0fddc4862f01225cf';
+
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+</script>
+
+<script>
+
+// ===== СОСТОЯНИЕ =====
+let songs    = [];
+let settings = {};
+let activeSongIndex = null;
+let dragSongIndex   = null;
+
+// ===== ЗАГРУЗКА =====
+const SB_URL = 'https://dvkpkwktxpqhvlwarrej.supabase.co';
+const SB_KEY = 'sb_publishable_3mkstnn9RW_zYCxpl-eTxw_IYSxUDYb';
+
+async function loadFromSupabase() {
+  const res = await fetch(SB_URL + '/rest/v1/prompter?id=eq.songs&select=data', {
+    headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+  });
+  const rows = await res.json();
+  if (rows && rows.length && rows[0].data && rows[0].data.songs) {
+    return rows[0].data;
+  }
+  // fallback — Supabase пустой, грузим songs.json и сразу публикуем в Supabase
+  const r = await fetch('songs.json');
+  const data = await r.json();
+  await saveToSupabase(data);
+  return data;
+}
+
+async function saveToSupabase(payload) {
+  const res = await fetch(SB_URL + '/rest/v1/prompter?id=eq.songs', {
+    method: 'PATCH',
+    headers: {
+      'apikey': SB_KEY,
+      'Authorization': 'Bearer ' + SB_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify({ data: payload, updated_at: new Date().toISOString() })
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error('Supabase error ' + res.status + ': ' + txt);
+  }
+}
+
+loadFromSupabase()
+  .then(data => {
+    if (Array.isArray(data)) { songs = data; settings = {}; }
+    else { songs = data.songs || []; settings = data.settings || {}; }
+    applySettingsToUI();
+    renderSongList();
+    if (songs.length > 0) selectSong(0);
+  })
+  .catch(err => {
+    showToast('Ошибка загрузки: ' + err.message, 'error');
+    songs = []; settings = {};
+    renderSongList();
+  });
+
+// ===== ТАБЫ =====
+document.querySelectorAll('.sidebar-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    const isSettings = tab.dataset.tab === 'settings';
+    document.getElementById('song-list').style.display          = isSettings ? 'none' : '';
+    document.getElementById('btn-add-song-inline').style.display = isSettings ? 'none' : '';
+    document.getElementById('settings-panel').classList.toggle('visible', isSettings);
+  });
+});
+
+// ===== ПРИМЕНИТЬ НАСТРОЙКИ В UI =====
+function applySettingsToUI() {
+  const s = settings;
+  const cs = s.colorScheme || {};
+  const savedFont = s.fontFamily || 'Barlow Semi Condensed';
+  setVal('s-font',       savedFont);
+  setVal('s-fontsize',   s.fontSize    || 48);
+  setVal('s-lineheight', s.lineHeight  || 1.35);
+  setVal('s-autojoin',   s.autoJoinLines ?? 4);
+  // обновляем пикер шрифтов
+  buildFontPicker(savedFont);
+  // устанавливаем hue-слайдер из сохранённого акцентного hex
+  const savedAccent = hexOrDefault(cs.accent, '#ff00bf');
+  document.getElementById('hue-slider').value = hexToHue(savedAccent);
+  updateHueSwatch();
+  const contrastEl = document.getElementById('s-contrast');
+  if (contrastEl) contrastEl.checked = s.contrast !== false;
+  updatePreview();
+}
+
+function hexOrDefault(val, def) {
+  // color input требует hex, не rgba
+  if (!val) return def;
+  if (val.startsWith('#')) return val;
+  return def; // rgba оставляем как есть, но input покажет дефолт
+}
+
+function setVal(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.value = val;
+}
+
+// ===== ПРЕВЬЮ =====
+function updatePreview() {
+  const font = document.getElementById('s-font').value;
+  loadGoogleFont(font);
+  // применяем шрифт на весь редактор — textarea секций, названия, лейблы
+  const fontStr = "'" + font + "', system-ui, sans-serif";
+  document.body.style.fontFamily = fontStr;
+  document.querySelectorAll('.section-card textarea, .section-card-header input, .sec-label').forEach(el => {
+    el.style.fontFamily = fontStr;
+  });
+}
+
+['s-fontsize','s-lineheight'].forEach(id => {
+  document.getElementById(id)?.addEventListener('input', updatePreview);
+});
+
+// ===== HUE PICKER =====
+function hueToHex(h) {
+  // HSL(h, 100%, 50%) → hex
+  const s = 1, l = 0.5;
+  const c = (1 - Math.abs(2*l - 1)) * s;
+  const x = c * (1 - Math.abs((h/60) % 2 - 1));
+  const m = l - c/2;
+  let r=0, g=0, b=0;
+  if      (h < 60)  { r=c; g=x; b=0; }
+  else if (h < 120) { r=x; g=c; b=0; }
+  else if (h < 180) { r=0; g=c; b=x; }
+  else if (h < 240) { r=0; g=x; b=c; }
+  else if (h < 300) { r=x; g=0; b=c; }
+  else              { r=c; g=0; b=x; }
+  const toHex = v => Math.round((v+m)*255).toString(16).padStart(2,'0');
+  return '#' + toHex(r) + toHex(g) + toHex(b);
+}
+function hexToHue(hex) {
+  const r = parseInt(hex.slice(1,3),16)/255;
+  const g = parseInt(hex.slice(3,5),16)/255;
+  const b = parseInt(hex.slice(5,7),16)/255;
+  const max = Math.max(r,g,b), min = Math.min(r,g,b), d = max-min;
+  if (d === 0) return 0;
+  let h = 0;
+  if (max === r) h = ((g-b)/d + (g<b?6:0)) / 6;
+  else if (max === g) h = ((b-r)/d + 2) / 6;
+  else h = ((r-g)/d + 4) / 6;
+  return Math.round(h * 360);
+}
+function getAccentHex() {
+  const hue = parseInt(document.getElementById('hue-slider').value);
+  return hueToHex(hue);
+}
+function updateHueSwatch() {
+  const hex = getAccentHex();
+  document.getElementById('hue-swatch').style.background = hex;
+  updateContrastHint();
+}
+document.getElementById('hue-slider').addEventListener('input', updateHueSwatch);
+document.getElementById('s-contrast')?.addEventListener('change', updateContrastHint);
+
+function updateContrastHint() {
+  const accent   = getAccentHex();
+  const contrast = document.getElementById('s-contrast').checked;
+  const scheme   = buildColorScheme(accent, contrast);
+  const hint = document.getElementById('contrast-hint');
+  hint.innerHTML =
+    '<span style="display:inline-block;width:14px;height:14px;background:' + scheme.bg +
+    ';border:1px solid #444;border-radius:3px;vertical-align:middle;margin-right:5px"></span>' +
+    '<span style="display:inline-block;width:14px;height:14px;background:' + scheme.text +
+    ';border:1px solid #444;border-radius:3px;vertical-align:middle;margin-right:8px"></span>' +
+    (contrast ? 'Чёрный фон · белый текст' : 'Тёмный фон · светлый текст');
+}
+
+function loadGoogleFont(name) {
+  const map = {
+    'Barlow Semi Condensed': 'Barlow+Semi+Condensed:wght@400;600;700',
+    'Oswald':                'Oswald:wght@400;500;600',
+    'Roboto Condensed':      'Roboto+Condensed:wght@400;700',
+    'PT Sans':               'PT+Sans:wght@400;700',
+    'Nunito':                'Nunito:wght@400;600;700',
+    'IBM Plex Mono':         'IBM+Plex+Mono:wght@400;700',
+  };
+  if (!map[name]) return;
+  if (document.querySelector('link[data-font="' + name + '"]')) return;
+  const link = document.createElement('link');
+  link.rel  = 'stylesheet';
+  link.href = 'https://fonts.googleapis.com/css2?family=' + map[name] + '&display=swap';
+  link.dataset.font = name;
+  document.head.appendChild(link);
+}
+
+// ===== FONT PICKER DROPDOWN =====
+const FONT_LIST = [
+  'Barlow Semi Condensed',
+  'Oswald',
+  'Roboto Condensed',
+  'PT Sans',
+  'Nunito',
+  'IBM Plex Mono',
+];
+
+FONT_LIST.forEach(loadGoogleFont);
+
+function buildFontPicker(selectedFont) {
+  const dropdown = document.getElementById('font-picker-dropdown');
+  const btn      = document.getElementById('font-picker-selected');
+  const label    = document.getElementById('font-picker-label');
+
+  // заполняем dropdown
+  dropdown.innerHTML = '';
+  FONT_LIST.forEach(name => {
+    const el = document.createElement('div');
+    el.className = 'font-option' + (name === selectedFont ? ' selected' : '');
+    el.textContent = name;
+    el.style.fontFamily = "'" + name + "', sans-serif";
+    el.addEventListener('click', () => {
+      document.querySelectorAll('.font-option').forEach(o => o.classList.remove('selected'));
+      el.classList.add('selected');
+      document.getElementById('s-font').value = name;
+      label.textContent = name;
+      label.style.fontFamily = "'" + name + "', sans-serif";
+      closeDropdown();
+      updatePreview();
+    });
+    dropdown.appendChild(el);
+  });
+
+  // устанавливаем текущий шрифт в кнопке
+  label.textContent = selectedFont;
+  label.style.fontFamily = "'" + selectedFont + "', sans-serif";
+}
+
+function closeDropdown() {
+  document.getElementById('font-picker-dropdown').classList.add('hidden');
+  document.getElementById('font-picker-selected').classList.remove('open');
+}
+
+document.getElementById('font-picker-selected').addEventListener('click', () => {
+  const dropdown = document.getElementById('font-picker-dropdown');
+  const btn = document.getElementById('font-picker-selected');
+  const isOpen = !dropdown.classList.contains('hidden');
+  if (isOpen) { closeDropdown(); } else { dropdown.classList.remove('hidden'); btn.classList.add('open'); }
+});
+
+// клик вне — закрыть
+document.addEventListener('click', e => {
+  if (!document.getElementById('font-picker-wrap').contains(e.target)) closeDropdown();
+});
+
+buildFontPicker('Barlow Semi Condensed');
+
+// ===== ВСПОМОГАТЕЛЬНАЯ: собрать настройки из UI =====
+function collectSettings() {
+  const accent   = getAccentHex();
+  const contrast = document.getElementById('s-contrast').checked;
+  return {
+    fontFamily:    document.getElementById('s-font').value,
+    fontSize:      parseInt(document.getElementById('s-fontsize').value),
+    lineHeight:    parseFloat(document.getElementById('s-lineheight').value),
+    contrast,
+    autoJoinLines: parseInt(document.getElementById('s-autojoin').value),
+    colorScheme:   buildColorScheme(accent, contrast),
+  };
+}
+
+// ===== ВЫЧИСЛЕНИЕ СХЕМЫ ИЗ АКЦЕНТА =====
+function buildColorScheme(accent, contrast) {
+  const ar = parseInt(accent.slice(1,3),16);
+  const ag = parseInt(accent.slice(3,5),16);
+  const ab = parseInt(accent.slice(5,7),16);
+  // без-контрастный режим: фон с лёгкой примесью акцента (остаётся)
+  const mx = (base, a) => Math.round(base + (a-base)*0.05).toString(16).padStart(2,'0');
+  const bgWarm  = '#' + mx(13,ar) + mx(13,ag) + mx(13,ab);
+  const bg2Warm = '#' + mx(20,ar) + mx(20,ag) + mx(20,ab);
+  if (contrast) {
+    // контрастный: чисто чёрный фон, без примеси акцента
+    return { bg: '#0d0d0d', bg2: '#141414', text: '#ffffff', accent, dim: 'rgba(255,255,255,0.38)' };
+  } else {
+    // тёплый: текст почти белый с лёгким намёком на акцент (было 0.28 → стало 0.10)
+    const txt = blendHex('#ececec', accent, 0.10);
+    return { bg: bgWarm, bg2: bg2Warm, text: txt, accent, dim: hexToRgba(txt, 0.40) };
+  }
+}
+
+// смешать два hex-цвета с весом t (0=a, 1=b)
+function blendHex(a, b, t) {
+  const ar = parseInt(a.slice(1,3),16), ag = parseInt(a.slice(3,5),16), ab = parseInt(a.slice(5,7),16);
+  const br = parseInt(b.slice(1,3),16), bg_ = parseInt(b.slice(3,5),16), bb = parseInt(b.slice(5,7),16);
+  const r = Math.round(ar + (br-ar)*t);
+  const g = Math.round(ag + (bg_-ag)*t);
+  const bl = Math.round(ab + (bb-ab)*t);
+  return '#' + [r,g,bl].map(v => v.toString(16).padStart(2,'0')).join('');
+}
+
+// hex → rgba строка
+function hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+}
+// чуть светлее bg для bg2
+function adjustBrightness(hex, amount) {
+  const r = Math.min(255, parseInt(hex.slice(1,3),16) + amount);
+  const g = Math.min(255, parseInt(hex.slice(3,5),16) + amount);
+  const b = Math.min(255, parseInt(hex.slice(5,7),16) + amount);
+  return '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
+}
+
+// ===== СПИСОК ПЕСЕН =====
+function renderSongList() {
+  const list = document.getElementById('song-list');
+  list.innerHTML = '';
+  songs.forEach((song, i) => {
+    const isDisabled = song.disabled === true;
+    const div = document.createElement('div');
+    div.className = 'song-item' + (i === activeSongIndex ? ' active' : '') + (isDisabled ? ' disabled' : '');
+    div.dataset.index = i;
+    div.draggable = true;
+    div.innerHTML = `
+      <span class="song-drag-handle">⠿</span>
+      <button class="toggle-active" title="${isDisabled ? 'Включить' : 'Отключить'}">${isDisabled ? '○' : '●'}</button>
+      <span class="song-num">${i + 1}</span>
+      <span class="song-name">${song.title || '(без названия)'}</span>
+      ${song.cover ? '<span class="song-cover-badge">cover</span>' : ''}
+    `;
+    div.querySelector('.toggle-active').addEventListener('click', e => {
+      e.stopPropagation();
+      if (activeSongIndex === i) saveCurrentToModel();
+      songs[i].disabled = !songs[i].disabled;
+      if (!songs[i].disabled) delete songs[i].disabled;
+      renderSongList();
+    });
+    div.addEventListener('click', () => selectSong(i));
+
+    div.addEventListener('dragstart', e => {
+      dragSongIndex = i;
+      e.dataTransfer.effectAllowed = 'move';
+      setTimeout(() => div.classList.add('song-dragging'), 0);
+    });
+    div.addEventListener('dragend', () => { dragSongIndex = null; div.classList.remove('song-dragging'); clearDropIndicators(); });
+    div.addEventListener('dragover', e => {
+      e.preventDefault();
+      if (dragSongIndex === null || dragSongIndex === i) return;
+      clearDropIndicators();
+      const mid = div.getBoundingClientRect().top + div.getBoundingClientRect().height / 2;
+      div.classList.add(e.clientY < mid ? 'drop-before' : 'drop-after');
+    });
+    div.addEventListener('dragleave', () => div.classList.remove('drop-before','drop-after'));
+    div.addEventListener('drop', e => {
+      e.preventDefault();
+      if (dragSongIndex === null || dragSongIndex === i) return;
+      const mid = div.getBoundingClientRect().top + div.getBoundingClientRect().height / 2;
+      let to = e.clientY < mid ? i : i + 1;
+      if (dragSongIndex < to) to--;
+      reorderSong(dragSongIndex, to);
+    });
+    list.appendChild(div);
+  });
+}
+
+function clearDropIndicators() {
+  document.querySelectorAll('.song-item').forEach(el => el.classList.remove('drop-before','drop-after'));
+}
+
+function reorderSong(from, to) {
+  if (from === to) return;
+  if (activeSongIndex !== null) saveCurrentToModel();
+  const item = songs.splice(from, 1)[0];
+  songs.splice(to, 0, item);
+  if (activeSongIndex === from) activeSongIndex = to;
+  else if (from < activeSongIndex && to >= activeSongIndex) activeSongIndex--;
+  else if (from > activeSongIndex && to <= activeSongIndex) activeSongIndex++;
+  renderSongList();
+}
+
+// ===== ВЫБОР ПЕСНИ =====
+function selectSong(index) {
+  if (activeSongIndex !== null) saveCurrentToModel();
+  activeSongIndex = index;
+  renderSongList();
+  renderSongForm();
+}
+
+function renderSongForm() {
+  if (activeSongIndex === null) return;
+  const song = songs[activeSongIndex];
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('song-form').style.display   = 'block';
+  document.getElementById('toolbar-title').textContent  = song.title || '(без названия)';
+  document.getElementById('f-title').value  = song.title || '';
+  document.getElementById('f-bpm').value    = song.bpm   || '';
+  document.getElementById('f-cover').value  = song.cover || '';
+  renderSections(song.sections || []);
+}
+
+// ===== СЕКЦИИ =====
+function renderSections(sections) {
+  const c = document.getElementById('sections-container');
+  c.innerHTML = '';
+  sections.forEach((sec, i) => c.appendChild(makeSectionCard(sec, i)));
+}
+
+function autoResize(ta) {
+  ta.style.height = 'auto';
+  ta.style.height = ta.scrollHeight + 'px';
+}
+
+function makeSectionCard(sec, index) {
+  const card = document.createElement('div');
+  card.className = 'section-card';
+  card.draggable = true;
+  card.dataset.index = index;
+  const text = (sec.lines || []).join('\n');
+  card.innerHTML = `
+    <div class="section-card-header">
+      <span class="collapse-arrow">▼</span>
+      <span class="drag-handle">⠿</span>
+      <input type="text" class="sec-label" value="${escHtml(sec.label||'')}" placeholder="куплет 1">
+      <button class="btn icon join-btn" title="Объединить со следующей секцией на одном экране">⤵</button>
+      <button class="btn icon danger">✕</button>
+    </div>
+    <textarea class="sec-lines">${escHtml(text)}</textarea>
+  `;
+  const ta = card.querySelector('textarea');
+  ta.addEventListener('input', () => autoResize(ta));
+  // после вставки в DOM — подгоняем высоту
+  requestAnimationFrame(() => autoResize(ta));
+  card.querySelector('.section-card-header').addEventListener('click', e => {
+    if (e.target.classList.contains('sec-label') || e.target.classList.contains('btn')) return;
+    card.classList.toggle('collapsed');
+  });
+  // joinNext кнопка
+  const joinBtn = card.querySelector('.join-btn');
+  function updateJoinBtn() {
+    const active = card.dataset.joinNext === 'true';
+    joinBtn.style.color       = active ? '#ff00bf' : '';
+    joinBtn.style.borderColor = active ? '#ff00bf' : '';
+    joinBtn.title = active ? 'Отменить объединение со следующей' : 'Объединить со следующей секцией';
+  }
+  if (sec.joinNext === true)  card.dataset.joinNext = 'true';
+  if (sec.joinNext === false) card.dataset.joinNext = 'false';
+  updateJoinBtn();
+  joinBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    const cur = card.dataset.joinNext === 'true';
+    card.dataset.joinNext = cur ? '' : 'true';
+    updateJoinBtn();
+  });
+  card.querySelector('.btn.danger').addEventListener('click', e => { e.stopPropagation(); card.remove(); });
+  // применяем текущий шрифт к новой карточке
+  const curFont = document.getElementById('s-font')?.value;
+  if (curFont) {
+    const fontStr = "'" + curFont + "', system-ui, sans-serif";
+    card.querySelector('textarea').style.fontFamily = fontStr;
+    card.querySelector('.sec-label').style.fontFamily = fontStr;
+  }
+
+  card.addEventListener('dragstart', e => { e.dataTransfer.effectAllowed='move'; card.classList.add('dragging'); e.dataTransfer.setData('text/plain',index); });
+  card.addEventListener('dragend',   () => card.classList.remove('dragging'));
+  card.addEventListener('dragover',  e => { e.preventDefault(); card.classList.add('drag-over'); });
+  card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+  card.addEventListener('drop', e => {
+    e.preventDefault(); card.classList.remove('drag-over');
+    const from = parseInt(e.dataTransfer.getData('text/plain'));
+    const to   = parseInt(card.dataset.index);
+    if (from !== to) reorderSection(from, to);
+  });
+  return card;
+}
+
+function reorderSection(from, to) {
+  const secs = readSectionsFromDOM();
+  const item = secs.splice(from, 1)[0];
+  secs.splice(to, 0, item);
+  songs[activeSongIndex].sections = secs;
+  renderSections(songs[activeSongIndex].sections);
+}
+
+function readSectionsFromDOM() {
+  return Array.from(document.querySelectorAll('.section-card')).map(card => {
+    const sec = {
+      label: card.querySelector('.sec-label').value.trim(),
+      lines: card.querySelector('.sec-lines').value.split('\n')
+    };
+    if (card.dataset.joinNext === 'true')  sec.joinNext = true;
+    if (card.dataset.joinNext === 'false') sec.joinNext = false;
+    return sec;
+  });
+}
+
+function saveCurrentToModel() {
+  if (activeSongIndex === null) return;
+  const song = songs[activeSongIndex];
+  song.title = (document.getElementById('f-title').value.trim().toUpperCase()) || song.title;
+  const bpm  = parseInt(document.getElementById('f-bpm').value);
+  song.bpm   = isNaN(bpm) ? null : bpm;
+  const cover = document.getElementById('f-cover').value.trim().toUpperCase();
+  if (cover) song.cover = cover; else delete song.cover;
+  song.sections = readSectionsFromDOM();
+}
+
+document.getElementById('f-title').addEventListener('input', e => {
+  document.getElementById('toolbar-title').textContent = e.target.value || '(без названия)';
+  if (activeSongIndex !== null) { songs[activeSongIndex].title = e.target.value.toUpperCase(); renderSongList(); }
+});
+
+document.getElementById('btn-add-section').addEventListener('click', () => {
+  const c = document.getElementById('sections-container');
+  const card = makeSectionCard({ label: '', lines: [''] }, c.children.length);
+  c.appendChild(card);
+  card.querySelector('.sec-label').focus();
+});
+
+function addNewSong() {
+  if (activeSongIndex !== null) saveCurrentToModel();
+  songs.push({ title: 'НОВАЯ ПЕСНЯ', bpm: null, sections: [{ label: 'куплет 1', lines: [''] }] });
+  renderSongList();
+  selectSong(songs.length - 1);
+  // переключаемся на таб сетлиста если вдруг открыт «Вид»
+  document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector('[data-tab="songs"]').classList.add('active');
+  document.getElementById('song-list').style.display = '';
+  document.getElementById('settings-panel').classList.remove('visible');
+  document.getElementById('btn-add-song-inline').style.display = '';
+}
+document.getElementById('btn-add-song').addEventListener('click', addNewSong);
+document.getElementById('btn-add-song-inline').addEventListener('click', addNewSong);
+
+document.getElementById('btn-delete-song').addEventListener('click', () => {
+  if (activeSongIndex === null) return;
+  if (!confirm('Удалить "' + songs[activeSongIndex].title + '"?')) return;
+  songs.splice(activeSongIndex, 1);
+  activeSongIndex = null;
+  document.getElementById('song-form').style.display   = 'none';
+  document.getElementById('empty-state').style.display = 'flex';
+  document.getElementById('toolbar-title').textContent  = 'Выберите песню';
+  renderSongList();
+  if (songs.length > 0) selectSong(0);
+});
+
+document.getElementById('btn-song-up').addEventListener('click',   () => moveSong(-1));
+document.getElementById('btn-song-down').addEventListener('click', () => moveSong(1));
+function moveSong(dir) {
+  if (activeSongIndex === null) return;
+  saveCurrentToModel();
+  const ni = activeSongIndex + dir;
+  if (ni < 0 || ni >= songs.length) return;
+  [songs[activeSongIndex], songs[ni]] = [songs[ni], songs[activeSongIndex]];
+  activeSongIndex = ni;
+  renderSongList();
+  renderSongForm();
+}
+
+// ===== СОХРАНИТЬ JSON =====
+document.getElementById('btn-save').addEventListener('click', () => {
+  if (activeSongIndex !== null) saveCurrentToModel();
+  settings = collectSettings(); // берём актуальные настройки из UI
+  const payload = { settings, songs };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = 'songs.json'; a.click();
+  URL.revokeObjectURL(url);
+  showToast('✅ Резервная копия сохранена', 'success');
+});
+
+// ===== ЗАГРУЗИТЬ JSON =====
+document.getElementById('btn-load-file').addEventListener('click', () => document.getElementById('file-input').click());
+document.getElementById('file-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (Array.isArray(data)) { songs = data; settings = {}; }
+      else { songs = data.songs || []; settings = data.settings || {}; }
+      activeSongIndex = null;
+      document.getElementById('song-form').style.display   = 'none';
+      document.getElementById('empty-state').style.display = 'flex';
+      applySettingsToUI();
+      renderSongList();
+      showToast('✅ Импортировано — нажми «Опубликовать» чтобы сохранить на сервер', 'success');
+      if (songs.length > 0) selectSong(0);
+    } catch { showToast('⚠️ Ошибка парсинга JSON', 'error'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'show ' + type;
+  setTimeout(() => { t.className = ''; }, 3000);
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+
+<script>
+// ===== ПАРОЛЬ =====
+(function() {
+  const modal = document.getElementById('modal-password');
+  const stored = localStorage.getItem('editor_auth');
+  if (stored === 'ok') {
+    modal.style.display = 'none';
+    return;
+  }
+  modal.style.display = 'flex';
+
+  // блокируем весь интерфейс пока не введён пароль
+  document.getElementById('sidebar').style.pointerEvents = 'none';
+  document.getElementById('editor-panel').style.pointerEvents = 'none';
+
+  async function tryPassword() {
+    const val = document.getElementById('input-password').value;
+    const hash = await sha256(val);
+    if (hash === PASSWORD_HASH) {
+      localStorage.setItem('editor_auth', 'ok');
+      modal.style.display = 'none';
+      document.getElementById('sidebar').style.pointerEvents = '';
+      document.getElementById('editor-panel').style.pointerEvents = '';
+    } else {
+      document.getElementById('password-error').style.display = 'block';
+      document.getElementById('input-password').value = '';
+    }
+  }
+
+  document.getElementById('btn-password-ok').addEventListener('click', tryPassword);
+  document.getElementById('input-password').addEventListener('keydown', e => {
+    if (e.key === 'Enter') tryPassword();
+  });
+  document.getElementById('input-password').focus();
+})();
+
+// ===== ПУБЛИКАЦИЯ В SUPABASE =====
+document.getElementById('btn-publish').addEventListener('click', async () => {
+  if (activeSongIndex !== null) saveCurrentToModel();
+  settings = collectSettings(); // собираем настройки из UI автоматически
+  const payload = { settings, songs };
+  const btn = document.getElementById('btn-publish');
+  btn.textContent = '⏳ Сохранение…';
+  btn.disabled = true;
+  try {
+    await saveToSupabase(payload);
+    btn.textContent = '✅ Сохранено!';
+    showToast('✅ Опубликовано — суфлёр обновится сразу', 'success');
+    setTimeout(() => { btn.textContent = '🚀 Опубликовать'; btn.disabled = false; }, 2500);
+  } catch(e) {
+    btn.textContent = '🚀 Опубликовать';
+    btn.disabled = false;
+    showToast('⚠️ Ошибка: ' + e.message, 'error');
+    console.error(e);
+  }
+});
+</script>
+
+</body>
+</html>
