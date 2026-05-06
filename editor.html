@@ -500,43 +500,94 @@ let settings = {};
 let activeSongIndex = null;
 let dragSongIndex   = null;
 
-// ===== ЗАГРУЗКА =====
-const SB_URL = 'https://dvkpkwktxpqhvlwarrej.supabase.co';
-const SB_KEY = 'sb_publishable_3mkstnn9RW_zYCxpl-eTxw_IYSxUDYb';
+// ===== ХРАНИЛИЩЕ: Яндекс Object Storage =====
+const YS3_BUCKET     = '__YS3_BUCKET__';
+const YS3_REGION     = 'ru-central1';
+const YS3_ENDPOINT   = 'https://storage.yandexcloud.net';
+const YS3_ACCESS_KEY = '__YS3_ACCESS_KEY__';
+const YS3_SECRET_KEY = '__YS3_SECRET_KEY__';
+const YS3_KEY        = 'songs.json';
 
-async function loadFromSupabase() {
-  const res = await fetch(SB_URL + '/rest/v1/prompter?id=eq.songs&select=data', {
-    headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
-  });
-  const rows = await res.json();
-  if (rows && rows.length && rows[0].data && rows[0].data.songs) {
-    return rows[0].data;
-  }
-  // fallback — Supabase пустой, грузим songs.json и сразу публикуем в Supabase
-  const r = await fetch('songs.json');
-  const data = await r.json();
-  await saveToSupabase(data);
-  return data;
+const _enc = new TextEncoder();
+
+async function _hmac(key, msg) {
+  const k = await crypto.subtle.importKey(
+    'raw', typeof key === 'string' ? _enc.encode(key) : key,
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  return crypto.subtle.sign('HMAC', k, _enc.encode(msg));
 }
 
-async function saveToSupabase(payload) {
-  const res = await fetch(SB_URL + '/rest/v1/prompter?id=eq.songs', {
-    method: 'PATCH',
-    headers: {
-      'apikey': SB_KEY,
-      'Authorization': 'Bearer ' + SB_KEY,
-      'Content-Type': 'application/json',
-      'Prefer': 'return=minimal'
-    },
-    body: JSON.stringify({ data: payload, updated_at: new Date().toISOString() })
+async function _sha256(data) {
+  const buf = await crypto.subtle.digest('SHA-256',
+    typeof data === 'string' ? _enc.encode(data) : data);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function _hmacHex(key, msg) {
+  return Array.from(new Uint8Array(await _hmac(key, msg)))
+    .map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function _s3AuthHeaders(method, body) {
+  const ct       = 'application/json';
+  const now      = new Date();
+  const dateZ    = now.toISOString().replace(/[-:.]/g, '').slice(0, 15) + 'Z';
+  const dateS    = dateZ.slice(0, 8);
+  const scope    = `${dateS}/${YS3_REGION}/s3/aws4_request`;
+  const host     = 'storage.yandexcloud.net';
+  const bodyBuf  = _enc.encode(body).buffer;
+  const bodyHash = await _sha256(bodyBuf);
+  const canonHeaders =
+    `content-type:${ct}\n` +
+    `host:${host}\n` +
+    `x-amz-content-sha256:${bodyHash}\n` +
+    `x-amz-date:${dateZ}\n`;
+  const signedHdrs = 'content-type;host;x-amz-content-sha256;x-amz-date';
+  const path     = `/${YS3_BUCKET}/${YS3_KEY}`;
+  const canonical = [method, path, '', canonHeaders, signedHdrs, bodyHash].join('\n');
+  const sts      = ['AWS4-HMAC-SHA256', dateZ, scope, await _sha256(canonical)].join('\n');
+  const kDate    = await _hmac(`AWS4${YS3_SECRET_KEY}`, dateS);
+  const kRegion  = await _hmac(kDate, YS3_REGION);
+  const kService = await _hmac(kRegion, 's3');
+  const kSign    = await _hmac(kService, 'aws4_request');
+  const sig      = await _hmacHex(kSign, sts);
+  return {
+    'Content-Type':          ct,
+    'x-amz-date':            dateZ,
+    'x-amz-content-sha256':  bodyHash,
+    'Authorization':
+      `AWS4-HMAC-SHA256 Credential=${YS3_ACCESS_KEY}/${scope}, ` +
+      `SignedHeaders=${signedHdrs}, Signature=${sig}`,
+  };
+}
+
+async function loadFromS3() {
+  const res = await fetch(`${YS3_ENDPOINT}/${YS3_BUCKET}/${YS3_KEY}`);
+  if (res.status === 404) {
+    // Бакет пустой — грузим songs.json и сразу публикуем
+    const r = await fetch('songs.json');
+    const data = await r.json();
+    await saveToS3(data);
+    return data;
+  }
+  if (!res.ok) throw new Error('S3 error ' + res.status);
+  return res.json();
+}
+
+async function saveToS3(payload) {
+  const body = JSON.stringify(payload);
+  const headers = await _s3AuthHeaders('PUT', body);
+  const res = await fetch(`${YS3_ENDPOINT}/${YS3_BUCKET}/${YS3_KEY}`, {
+    method: 'PUT', headers, body,
   });
   if (!res.ok) {
     const txt = await res.text();
-    throw new Error('Supabase error ' + res.status + ': ' + txt);
+    throw new Error('S3 error ' + res.status + ': ' + txt);
   }
 }
 
-loadFromSupabase()
+loadFromS3()
   .then(data => {
     if (Array.isArray(data)) { songs = data; settings = {}; }
     else { songs = data.songs || []; settings = data.settings || {}; }
@@ -1129,7 +1180,7 @@ function escHtml(s) {
   document.getElementById('input-password').focus();
 })();
 
-// ===== ПУБЛИКАЦИЯ В SUPABASE =====
+// ===== ПУБЛИКАЦИЯ =====
 document.getElementById('btn-publish').addEventListener('click', async () => {
   if (activeSongIndex !== null) saveCurrentToModel();
   settings = collectSettings(); // собираем настройки из UI автоматически
@@ -1138,7 +1189,7 @@ document.getElementById('btn-publish').addEventListener('click', async () => {
   btn.textContent = '⏳ Сохранение…';
   btn.disabled = true;
   try {
-    await saveToSupabase(payload);
+    await saveToS3(payload);
     btn.textContent = '✅ Сохранено!';
     showToast('✅ Опубликовано — суфлёр обновится сразу', 'success');
     setTimeout(() => { btn.textContent = '🚀 Опубликовать'; btn.disabled = false; }, 2500);

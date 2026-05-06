@@ -313,23 +313,10 @@ function blendToRgba(hex, brightness, alpha) {
   return 'rgba(' + nr + ',' + ng + ',' + nb + ',' + alpha + ')';
 }
 
-const SB_URL = 'https://dvkpkwktxpqhvlwarrej.supabase.co';
-const SB_KEY = 'sb_publishable_3mkstnn9RW_zYCxpl-eTxw_IYSxUDYb';
+const YS3_DATA_URL = 'https://storage.yandexcloud.net/teplitsa-prompter/songs.json';
 
-fetch(SB_URL + '/rest/v1/prompter?id=eq.songs&select=data', {
-  headers: {
-    'apikey': SB_KEY,
-    'Authorization': 'Bearer ' + SB_KEY
-  }
-})
-  .then(r => r.json())
-  .then(rows => {
-    if (!rows || !rows.length || !rows[0].data || !rows[0].data.songs) {
-      // Supabase пустой — fallback на songs.json
-      return fetch('songs.json').then(r => r.json());
-    }
-    return rows[0].data;
-  })
+fetch(YS3_DATA_URL)
+  .then(r => r.ok ? r.json() : fetch('songs.json').then(r => r.json()))
   .then(data => {
     const settings = data.settings || {};
     const songsArr = Array.isArray(data) ? data : (data.songs || []);

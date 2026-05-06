@@ -1,16 +1,16 @@
 {
   "settings": {
-    "fontFamily": "Nunito",
-    "fontSize": 48,
-    "lineHeight": 1.35,
     "contrast": false,
+    "fontSize": 48,
+    "fontFamily": "Nunito",
+    "lineHeight": 1.35,
     "autoJoinLines": 0,
     "colorScheme": {
-      "bg": "#10190c",
-      "bg2": "#162013",
-      "text": "#dbeed4",
-      "accent": "#44ff00",
-      "dim": "rgba(219,238,212,0.4)"
+      "bg": "#190c0d",
+      "bg2": "#201313",
+      "dim": "rgba(238,212,213,0.4)",
+      "text": "#eed4d5",
+      "accent": "#ff0004"
     }
   },
   "songs": [
