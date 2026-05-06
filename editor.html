@@ -501,7 +501,7 @@ let activeSongIndex = null;
 let dragSongIndex   = null;
 
 // ===== ХРАНИЛИЩЕ: Яндекс Object Storage =====
-const YS3_BUCKET     = '__YS3_BUCKET__';
+const YS3_BUCKET     = 'teplitsa-prompter';
 const YS3_REGION     = 'ru-central1';
 const YS3_ENDPOINT   = 'https://storage.yandexcloud.net';
 const YS3_ACCESS_KEY = '__YS3_ACCESS_KEY__';
@@ -563,15 +563,21 @@ async function _s3AuthHeaders(method, body) {
 }
 
 async function loadFromS3() {
-  const res = await fetch(`${YS3_ENDPOINT}/${YS3_BUCKET}/${YS3_KEY}`);
+  let res;
+  try {
+    res = await fetch(`${YS3_ENDPOINT}/${YS3_BUCKET}/${YS3_KEY}`);
+  } catch {
+    // Нет сети или CORS — грузим локальный songs.json
+    return fetch('songs.json').then(r => r.json());
+  }
   if (res.status === 404) {
-    // Бакет пустой — грузим songs.json и сразу публикуем
+    // Бакет пустой — грузим локальный songs.json и пробуем залить в S3
     const r = await fetch('songs.json');
     const data = await r.json();
-    await saveToS3(data);
+    saveToS3(data).catch(() => {}); // не блокируем загрузку если PUT упадёт
     return data;
   }
-  if (!res.ok) throw new Error('S3 error ' + res.status);
+  if (!res.ok) return fetch('songs.json').then(r => r.json());
   return res.json();
 }
 
