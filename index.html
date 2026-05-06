@@ -213,6 +213,71 @@ html, body {
   border-color: rgba(255,255,255,0.3);
 }
 
+#toggle-tracklist {
+  position: fixed;
+  bottom: 52px; right: 12px;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: var(--dim);
+  font-size: 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+#toggle-tracklist.active {
+  background: rgba(255,255,255,0.1);
+  color: var(--text);
+  border-color: rgba(255,255,255,0.3);
+}
+
+#tracklist-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 170;
+  display: none;
+}
+#tracklist-backdrop.open { display: block; }
+
+#tracklist-panel {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: min(260px, 82vw);
+  background: var(--bg2);
+  border-left: 1px solid rgba(255,255,255,0.08);
+  z-index: 180;
+  overflow-y: auto;
+  transform: translateX(100%);
+  transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+  padding-top: calc(env(safe-area-inset-top) + 20px);
+  padding-bottom: calc(env(safe-area-inset-bottom) + 20px);
+}
+#tracklist-panel.open { transform: translateX(0); }
+
+.tl-item {
+  padding: 14px 20px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: background 0.12s, color 0.12s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  line-height: 1.3;
+}
+.tl-item:active { background: rgba(255,255,255,0.06); color: var(--text); }
+.tl-item.tl-active { color: var(--accent); }
+
 #loading {
   display: flex;
   align-items: center;
@@ -256,7 +321,10 @@ html, body {
 </div>
 
 <button id="toggle-controls" title="Показать/скрыть кнопки">☰</button>
+<button id="toggle-tracklist" title="Список песен">♫</button>
 <a id="open-editor" href="editor.html" title="Открыть редактор">✎</a>
+<div id="tracklist-backdrop"></div>
+<div id="tracklist-panel"></div>
 <div id="swipe-hint"></div>
 
 <script>
@@ -490,6 +558,40 @@ function init(songsData, settings) {
   document.getElementById('nextSection').addEventListener('click', nextSection);
   document.getElementById('prevSong').addEventListener('click', prevSong);
   document.getElementById('nextSong').addEventListener('click', nextSong);
+
+  // ===== ТРЕКЛИСТ =====
+  const tlPanel  = document.getElementById('tracklist-panel');
+  const tlBtn    = document.getElementById('toggle-tracklist');
+  const tlBg     = document.getElementById('tracklist-backdrop');
+
+  songsData.filter(s => !s.disabled).forEach((song, si) => {
+    const item = document.createElement('div');
+    item.className = 'tl-item';
+    item.textContent = buildSongTitle(song);
+    item.addEventListener('click', () => {
+      showSection(sectionMap.indexOf(si), true);
+      closeTL();
+    });
+    tlPanel.appendChild(item);
+  });
+
+  function openTL() {
+    tlPanel.classList.add('open');
+    tlBg.classList.add('open');
+    tlBtn.classList.add('active');
+    tlPanel.querySelectorAll('.tl-item').forEach((el, i) => {
+      el.classList.toggle('tl-active', i === sectionMap[current]);
+      if (i === sectionMap[current]) el.scrollIntoView({ block: 'nearest' });
+    });
+  }
+  function closeTL() {
+    tlPanel.classList.remove('open');
+    tlBg.classList.remove('open');
+    tlBtn.classList.remove('active');
+  }
+
+  tlBtn.addEventListener('click', () => tlPanel.classList.contains('open') ? closeTL() : openTL());
+  tlBg.addEventListener('click', closeTL);
 
   const wrap = document.getElementById('controls-wrap');
   const tog  = document.getElementById('toggle-controls');
