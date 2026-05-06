@@ -315,15 +315,32 @@ function blendToRgba(hex, brightness, alpha) {
 
 const YS3_DATA_URL = 'https://storage.yandexcloud.net/teplitsa-prompter/songs.json';
 
+const CACHE_KEY = 'prompter_songs_cache';
+
+function loadFromCache() {
+  try { return JSON.parse(localStorage.getItem(CACHE_KEY)); } catch { return null; }
+}
+
+function saveToCache(data) {
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify(data)); } catch {}
+}
+
+function applyData(data) {
+  const settings = data.settings || {};
+  const songsArr = Array.isArray(data) ? data : (data.songs || []);
+  applySettings(settings);
+  init(songsArr, settings);
+}
+
 fetch(YS3_DATA_URL)
-  .then(r => r.ok ? r.json() : fetch('songs.json').then(r => r.json()))
-  .catch(() => fetch('songs.json').then(r => r.json()))
-  .then(data => {
-    const settings = data.settings || {};
-    const songsArr = Array.isArray(data) ? data : (data.songs || []);
-    applySettings(settings);
-    init(songsArr, settings);
+  .then(r => r.ok ? r.json() : Promise.reject('not-ok'))
+  .then(data => { saveToCache(data); return data; })
+  .catch(() => {
+    const cached = loadFromCache();
+    if (cached) return cached;
+    return fetch('songs.json').then(r => r.json());
   })
+  .then(applyData)
   .catch(err => {
     document.getElementById('loading').textContent = '⚠ ошибка загрузки';
     console.error(err);
